@@ -1,0 +1,3 @@
+# Les prompts .st sont des templates StringTemplate (Spring AI), pas du Smalltalk :
+# GitHub ne doit pas les compter dans les langages du dépôt.
+*.st linguist-detectable=false

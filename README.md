@@ -1,5 +1,7 @@
 # HelpDesk Agent
 
+[![CI](https://github.com/Sollres/Helpdesk-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/Sollres/Helpdesk-Agent/actions/workflows/ci.yml)
+
 **Agent LLM de support informatique interne, en Java 21 / Spring Boot 4 / Spring AI 2, 100 % local avec Ollama.**
 
 Un salarié décrit son problème en langage courant. L'agent cherche dans les procédures internes et dans l'historique des tickets, puis répond en citant sa source, signale un incident déjà en cours, propose la solution d'un ticket déjà résolu, ou crée un ticket — seulement après l'accord de l'utilisateur.
