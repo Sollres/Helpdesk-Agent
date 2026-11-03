@@ -1,0 +1,39 @@
+# Développement : `docker compose up -d` lance uniquement la base.
+# Démo complète : `docker compose --profile app up -d --build` lance aussi l'application.
+# Ollama tourne sur la machine hôte (accès au GPU du Mac, impossible depuis un conteneur).
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: helpdesk
+      POSTGRES_USER: helpdesk
+      POSTGRES_PASSWORD: helpdesk
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U helpdesk -d helpdesk"]
+      interval: 5s
+      retries: 10
+
+  app:
+    profiles: ["app"]
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/helpdesk
+      DB_USER: helpdesk
+      DB_PASSWORD: helpdesk
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      AI_PROVIDER: ${AI_PROVIDER:-ollama}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

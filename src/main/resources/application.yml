@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: helpdesk-agent
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/helpdesk}
+    username: ${DB_USER:helpdesk}
+    password: ${DB_PASSWORD:helpdesk}
+  flyway:
+    placeholders:
+      embedding_dimensions: ${EMBEDDING_DIMENSIONS:1024}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  ai:
+    # Fournisseur actif : ollama (local, gratuit) ou openai (clé API requise).
+    # Seule l'auto-configuration du fournisseur choisi est activée.
+    model:
+      chat: ${AI_PROVIDER:ollama}
+      embedding: ${AI_PROVIDER:ollama}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      init:
+        pull-model-strategy: when_missing
+      chat:
+        # qwen3:8b appelle les outils de façon bien plus fiable que qwen2.5:7b (voir SPECS.md)
+        model: ${OLLAMA_CHAT_MODEL:qwen3:8b}
+        # 0 : réponses reproductibles (support et évaluation comparables d'une exécution à l'autre)
+        temperature: 0.0
+        num-predict: 800
+        # Fenêtre de contexte : prompt système + procédures + historique + outils
+        num-ctx: 8192
+        # Mode « réflexion » des modèles qui le proposent (qwen3...) : trop lent pour un chat
+        think: false
+      embedding:
+        model: ${OLLAMA_EMBEDDING_MODEL:bge-m3}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        model: ${OPENAI_MODEL:gpt-4.1-mini}
+        temperature: 0.2
+        max-tokens: 800
+      embedding:
+        model: text-embedding-3-small
+    vectorstore:
+      pgvector:
+        # Le schéma est géré par Flyway (db/migration)
+        initialize-schema: false
+        dimensions: ${EMBEDDING_DIMENSIONS:1024}
+        distance-type: cosine_distance
+        index-type: hnsw
+
+helpdesk:
+  knowledge:
+    location: classpath:knowledge/*
+    load-on-startup: true
+    top-k: 4
+    similarity-threshold: 0.5
+  tickets:
+    top-k: 3
+    similarity-threshold: 0.55
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    # Avertissement sans conséquence sur macOS (résolveur DNS natif absent)
+    io.netty.resolver.dns.DnsServerAddressStreamProviders: off

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HelpDesk Agent</title>
+    <style>
+        :root {
+            --bg: #f4f6fb;
+            --surface: #ffffff;
+            --surface-2: #eef1f7;
+            --border: #dde2ec;
+            --text: #1b2333;
+            --muted: #5f6b80;
+            --accent: #3b5bdb;
+            --accent-soft: #e7ecff;
+            --accent-text: #ffffff;
+            --success: #1f7a4d;
+            --success-soft: #e3f5ea;
+            --warning: #9a5b00;
+            --warning-soft: #fff1d6;
+            --danger: #b42318;
+            --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 12px rgba(16, 24, 40, .06);
+            --radius: 14px;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f131a;
+                --surface: #171c25;
+                --surface-2: #1f2633;
+                --border: #2b3343;
+                --text: #e6e9ef;
+                --muted: #98a2b3;
+                --accent: #6d8cff;
+                --accent-soft: #1f2a4d;
+                --accent-text: #0f131a;
+                --success: #5fd39a;
+                --success-soft: #133325;
+                --warning: #f5b84a;
+                --warning-soft: #3a2c10;
+                --danger: #ff8a80;
+                --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+            }
+        }
+
+        * { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            font-size: 15px;
+            line-height: 1.55;
+        }
+
+        /* --- En-tête --- */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .header-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: .8rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .8rem;
+        }
+        .logo {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent), #7048e8);
+            display: grid; place-items: center;
+            color: #fff; font-weight: 700; font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .brand { flex: 1; min-width: 0; }
+        .brand h1 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+        .brand p { margin: 0; color: var(--muted); font-size: .82rem; }
+        .badge-local {
+            display: inline-flex; align-items: center; gap: .35rem;
+            font-size: .75rem; color: var(--success);
+            background: var(--success-soft);
+            padding: .2rem .6rem; border-radius: 999px;
+            white-space: nowrap;
+        }
+        .badge-local::before {
+            content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--success);
+        }
+        .btn-ghost {
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text);
+            border-radius: 10px;
+            padding: .45rem .8rem;
+            font: inherit; font-size: .85rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-ghost:hover { background: var(--surface-2); }
+        .btn-ghost .short { display: none; }
+
+        /* --- Conversation --- */
+        main { flex: 1; }
+        .view { flex: 1; display: flex; flex-direction: column; }
+        #messages {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+        }
+        .row { display: flex; gap: .7rem; align-items: flex-start; }
+        .row.user { justify-content: flex-end; }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: grid; place-items: center;
+            font-size: .75rem; font-weight: 700;
+            flex-shrink: 0;
+            background: var(--accent-soft); color: var(--accent);
+        }
+        .bubble {
+            max-width: min(640px, 85%);
+            padding: .75rem 1rem;
+            border-radius: var(--radius);
+            overflow-wrap: anywhere;
+        }
+        .row.user .bubble {
+            background: var(--accent);
+            color: var(--accent-text);
+            border-bottom-right-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .row.bot .bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            border-top-left-radius: 4px;
+        }
+        .bubble p { margin: 0 0 .55rem; }
+        .bubble p:last-child, .bubble ol:last-child, .bubble ul:last-child { margin-bottom: 0; }
+        .bubble ol, .bubble ul { margin: .2rem 0 .6rem; padding-left: 1.3rem; }
+        .bubble li { margin: .2rem 0; }
+        .bubble code {
+            background: var(--surface-2); border-radius: 5px;
+            padding: .05rem .35rem; font-size: .88em;
+        }
+        .bubble.error { border-color: var(--danger); color: var(--danger); }
+
+        /* --- Métadonnées sous la réponse --- */
+        .meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .7rem; }
+        .chip {
+            display: inline-flex; align-items: center; gap: .3rem;
+            font-size: .75rem;
+            padding: .2rem .6rem; border-radius: 999px;
+            background: var(--surface-2); color: var(--muted);
+        }
+        .chip.source { background: var(--accent-soft); color: var(--accent); }
+
+        .ticket-card {
+            margin-top: .8rem;
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--success);
+            border-radius: 10px;
+            padding: .65rem .85rem;
+            background: var(--surface-2);
+        }
+        .ticket-card .ticket-head {
+            display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+            font-size: .75rem; color: var(--success); font-weight: 600;
+            text-transform: uppercase; letter-spacing: .03em;
+        }
+        .ticket-card .ticket-ref { font-size: 1rem; font-weight: 700; color: var(--text); margin: .15rem 0; }
+        .ticket-card .ticket-title { color: var(--muted); font-size: .88rem; }
+        .ticket-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+        .tag {
+            font-size: .72rem; padding: .12rem .5rem; border-radius: 6px;
+            background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+        }
+        .tag.prio-HIGH, .tag.prio-CRITICAL { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
+
+        /* --- Indicateur de saisie --- */
+        .typing { display: inline-flex; gap: 4px; padding: .3rem 0; }
+        .typing span {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--muted); opacity: .4;
+            animation: blink 1.2s infinite;
+        }
+        .typing span:nth-child(2) { animation-delay: .2s; }
+        .typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+        /* --- Écran d'accueil --- */
+        .welcome { text-align: center; padding: 2.5rem 0 1rem; }
+        .welcome .logo { width: 56px; height: 56px; font-size: 1.3rem; margin: 0 auto 1rem; border-radius: 16px; }
+        .welcome h2 { margin: 0 0 .35rem; font-size: 1.35rem; }
+        .welcome p { margin: 0 auto; color: var(--muted); max-width: 520px; }
+        .suggestions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: .65rem;
+            margin-top: 1.6rem;
+            text-align: left;
+        }
+        .suggestion {
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 12px;
+            padding: .75rem .9rem;
+            cursor: pointer;
+            font: inherit; color: inherit; text-align: left;
+            box-shadow: var(--shadow);
+            transition: border-color .15s, transform .15s;
+        }
+        .suggestion:hover { border-color: var(--accent); transform: translateY(-1px); }
+        .suggestion strong { display: block; font-size: .88rem; font-weight: 600; }
+        .suggestion span { color: var(--muted); font-size: .8rem; }
+
+        /* --- Zone de saisie --- */
+        footer {
+            position: sticky; bottom: 0;
+            background: linear-gradient(to top, var(--bg) 70%, transparent);
+            padding: .8rem 1.25rem 1.1rem;
+        }
+        form {
+            max-width: 860px; margin: 0 auto;
+            display: flex; gap: .5rem; align-items: flex-end;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: .45rem .45rem .45rem .9rem;
+            box-shadow: var(--shadow);
+        }
+        form:focus-within { border-color: var(--accent); }
+        textarea {
+            flex: 1; border: 0; outline: none; resize: none;
+            background: transparent; color: var(--text);
+            font: inherit; padding: .45rem 0;
+            max-height: 160px;
+        }
+        textarea::placeholder { color: var(--muted); }
+        #send {
+            width: 40px; height: 40px; border: 0; border-radius: 11px;
+            background: var(--accent); color: var(--accent-text);
+            cursor: pointer; display: grid; place-items: center;
+            flex-shrink: 0;
+        }
+        #send:disabled { opacity: .45; cursor: wait; }
+        .hint { max-width: 860px; margin: .45rem auto 0; text-align: center; font-size: .72rem; color: var(--muted); }
+
+        /* --- Onglets --- */
+        .tabs { display: flex; gap: .25rem; background: var(--surface-2); padding: .25rem; border-radius: 11px; }
+        .tab {
+            display: inline-flex; align-items: center; gap: .4rem;
+            padding: .35rem .8rem; border-radius: 8px;
+            color: var(--muted); text-decoration: none; font-size: .88rem; font-weight: 500;
+        }
+        .tab:hover { color: var(--text); }
+        .tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+        .tab .count {
+            min-width: 1.3rem; padding: 0 .35rem; border-radius: 999px;
+            background: var(--accent); color: var(--accent-text);
+            font-size: .7rem; font-weight: 700; text-align: center; line-height: 1.3rem;
+        }
+        .tab .count:empty { display: none; }
+        [hidden] { display: none !important; }
+
+        /* --- Vue tickets --- */
+        .tickets-wrap { max-width: 980px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; width: 100%; }
+        .tickets-toolbar { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .tickets-toolbar h2 { margin: 0; font-size: 1.2rem; flex: 1; }
+        .filters { display: flex; gap: .35rem; flex-wrap: wrap; }
+        .filter {
+            border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+            border-radius: 999px; padding: .3rem .75rem; font: inherit; font-size: .82rem; cursor: pointer;
+        }
+        .filter.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+        .filter .n { opacity: .7; margin-left: .25rem; }
+
+        .ticket-list {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+        }
+        .ticket-row {
+            display: grid;
+            grid-template-columns: 150px 1fr auto auto 110px;
+            gap: .9rem; align-items: center;
+            padding: .8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer; width: 100%;
+            background: none; border-left: 0; border-right: 0; border-top: 0;
+            font: inherit; color: inherit; text-align: left;
+        }
+        .ticket-row:last-child { border-bottom: 0; }
+        .ticket-row:hover { background: var(--surface-2); }
+        .ticket-row .ref { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; color: var(--muted); }
+        .ticket-row .title { font-weight: 600; font-size: .92rem; }
+        .ticket-row .sub { color: var(--muted); font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ticket-row .main { min-width: 0; }
+        .ticket-row .when { color: var(--muted); font-size: .78rem; text-align: right; white-space: nowrap; }
+        .status {
+            display: inline-block; font-size: .72rem; font-weight: 600;
+            padding: .15rem .55rem; border-radius: 999px; white-space: nowrap;
+        }
+        .status-OPEN { background: var(--accent-soft); color: var(--accent); }
+        .status-IN_PROGRESS { background: var(--warning-soft); color: var(--warning); }
+        .status-RESOLVED { background: var(--success-soft); color: var(--success); }
+        .status-CLOSED { background: var(--surface-2); color: var(--muted); }
+        .empty { padding: 2.5rem 1rem; text-align: center; color: var(--muted); }
+
+        /* --- Détail d'un ticket (panneau latéral) --- */
+        .overlay { position: fixed; inset: 0; background: rgba(15, 19, 26, .35); z-index: 10; }
+        .drawer {
+            position: fixed; top: 0; right: 0; bottom: 0;
+            width: min(480px, 100%);
+            background: var(--surface); border-left: 1px solid var(--border);
+            z-index: 11; overflow-y: auto;
+            padding: 1.25rem 1.4rem 2rem;
+            box-shadow: -8px 0 24px rgba(16, 24, 40, .12);
+        }
+        .drawer-head { display: flex; align-items: flex-start; gap: .8rem; }
+        .drawer-head h3 { margin: .2rem 0 .5rem; font-size: 1.1rem; flex: 1; }
+        .drawer .ref { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); font-size: .85rem; }
+        .close {
+            border: 0; background: var(--surface-2); color: var(--text);
+            width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; flex-shrink: 0;
+        }
+        .drawer-tags { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+        .drawer section { margin-top: 1.3rem; }
+        .drawer h4 {
+            margin: 0 0 .45rem; font-size: .75rem; color: var(--muted);
+            text-transform: uppercase; letter-spacing: .04em;
+        }
+        .drawer .text { white-space: pre-wrap; }
+        .resolution { border-left: 3px solid var(--success); background: var(--success-soft); padding: .6rem .8rem; border-radius: 8px; }
+        .dates { color: var(--muted); font-size: .8rem; margin-top: .6rem; }
+        .comment { border-left: 2px solid var(--border); padding: .1rem 0 .8rem .9rem; }
+        .comment .who { font-size: .78rem; color: var(--muted); }
+        .ticket-card { cursor: pointer; }
+        .ticket-card:hover { border-color: var(--success); }
+
+        @media (max-width: 600px) {
+            .brand, .badge-local, .hint { display: none; }
+            .header-inner { justify-content: space-between; }
+            .ticket-row { grid-template-columns: 1fr auto; gap: .3rem .6rem; }
+            .ticket-row .ref { grid-column: 1; }
+            .ticket-row .main { grid-column: 1 / -1; grid-row: 2; }
+            .ticket-row .cat, .ticket-row .prio { display: none; }
+            .ticket-row .when { grid-column: 2; grid-row: 1; }
+            .ticket-row .status { grid-column: 1; }
+            .btn-ghost .long { display: none; }
+            .btn-ghost .short { display: inline; }
+            .suggestions { grid-template-columns: 1fr; }
+            .bubble { max-width: 92%; }
+            .row .avatar { display: none; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <div class="logo">IT</div>
+        <div class="brand">
+            <h1>HelpDesk Agent</h1>
+            <p>Assistant de support informatique interne</p>
+        </div>
+        <nav class="tabs">
+            <a class="tab active" href="#chat" data-view="chat">Assistant</a>
+            <a class="tab" href="#tickets" data-view="tickets">Tickets <span class="count" id="ticket-count" title="Tickets ouverts ou en cours"></span></a>
+        </nav>
+        <span class="badge-local" title="Le modèle tourne sur cette machine (Ollama)">IA locale</span>
+        <button class="btn-ghost" id="reset" type="button"><span class="long">Nouvelle conversation</span><span class="short">Nouveau</span></button>
+    </div>
+</header>
+
+<div class="view" id="view-chat">
+<main>
+    <div id="messages"></div>
+</main>
+
+<footer>
+    <form id="form">
+        <textarea id="input" rows="1" placeholder="Décrivez votre problème…" required></textarea>
+        <button id="send" type="submit" aria-label="Envoyer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+    </form>
+    <div class="hint">Entrée pour envoyer · Maj+Entrée pour aller à la ligne · Réponses fondées sur les procédures et tickets internes</div>
+</footer>
+</div>
+
+<div class="view" id="view-tickets" hidden>
+    <div class="tickets-wrap">
+        <div class="tickets-toolbar">
+            <h2>Tickets</h2>
+            <div class="filters" id="filters"></div>
+            <button class="btn-ghost" id="refresh" type="button">Actualiser</button>
+        </div>
+        <div class="ticket-list" id="ticket-list"></div>
+    </div>
+</div>
+
+<div class="overlay" id="overlay" hidden></div>
+<aside class="drawer" id="drawer" hidden aria-label="Détail du ticket"></aside>
+
+<script>
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const send = document.getElementById('send');
+    let conversationId = null;
+
+    const SUGGESTIONS = [
+        { title: 'Mon VPN ne se connecte plus', hint: 'Procédure interne' },
+        { title: "Mes mails restent bloqués dans la boîte d'envoi Outlook", hint: 'Incident en cours' },
+        { title: "Mon second écran reste noir sur la station d'accueil", hint: 'Solution déjà connue' },
+        { title: 'Où en est le ticket HD-2026-000002 ?', hint: "Suivi d'un ticket" },
+    ];
+
+    const LABELS = {
+        category: { ACCESS: 'Accès', NETWORK: 'Réseau', HARDWARE: 'Matériel', SOFTWARE: 'Logiciel', OTHER: 'Autre' },
+        priority: { LOW: 'Priorité basse', MEDIUM: 'Priorité moyenne', HIGH: 'Priorité haute', CRITICAL: 'Priorité critique' },
+        status: { OPEN: 'Ouvert', IN_PROGRESS: 'En cours', RESOLVED: 'Résolu', CLOSED: 'Fermé' },
+    };
+
+    function el(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+    }
+
+    function escapeHtml(text) {
+        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function inline(text) {
+        return escapeHtml(text)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    // Rendu Markdown minimal (texte échappé) : paragraphes, listes numérotées et à puces, gras, code.
+    // La ligne « Source : » est retirée du texte quand les sources sont affichées en pastilles.
+    function renderMarkdown(text, hideSourceLine) {
+        const lines = text.split('\n')
+            .filter(l => !(hideSourceLine && /^\s*[*_>-]*\s*sources?\s*[*_]*\s*:/i.test(l)));
+        let html = '';
+        let list = null;
+        let paragraph = [];
+        const flushParagraph = () => {
+            if (paragraph.length) html += '<p>' + paragraph.map(inline).join('<br>') + '</p>';
+            paragraph = [];
+        };
+        const closeList = () => {
+            if (list) html += '</' + list + '>';
+            list = null;
+        };
+        for (const raw of lines) {
+            const line = raw.trim();
+            const ordered = line.match(/^\d+[.)]\s+(.*)$/);
+            const bullet = line.match(/^[-*•]\s+(.*)$/);
+            if (ordered || bullet) {
+                flushParagraph();
+                const type = ordered ? 'ol' : 'ul';
+                if (list !== type) { closeList(); html += '<' + type + '>'; list = type; }
+                html += '<li>' + inline((ordered || bullet)[1]) + '</li>';
+            } else if (line === '') {
+                flushParagraph();
+                closeList();
+            } else {
+                closeList();
+                paragraph.push(line.replace(/^#{1,6}\s+/, ''));
+            }
+        }
+        flushParagraph();
+        closeList();
+        return html;
+    }
+
+    // Jusqu'en bas de la page : le dernier message reste visible au-dessus de la zone de saisie
+    function scrollToBottom() {
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    function addRow(role) {
+        const row = el('div', 'row ' + role);
+        if (role === 'bot') row.appendChild(el('div', 'avatar', 'IT'));
+        const bubble = el('div', 'bubble');
+        row.appendChild(bubble);
+        messages.appendChild(row);
+        return bubble;
+    }
+
+    function ticketCard(ticket) {
+        const card = el('div', 'ticket-card');
+        card.title = 'Voir le ticket';
+        card.addEventListener('click', () => { location.hash = '#tickets'; openTicket(ticket.reference); });
+        const head = el('div', 'ticket-head');
+        head.appendChild(el('span', '', 'Ticket créé'));
+        head.appendChild(el('span', '', LABELS.status[ticket.status] || ticket.status));
+        card.appendChild(head);
+        card.appendChild(el('div', 'ticket-ref', ticket.reference));
+        card.appendChild(el('div', 'ticket-title', ticket.title));
+        const tags = el('div', 'ticket-tags');
+        tags.appendChild(el('span', 'tag', LABELS.category[ticket.category] || ticket.category));
+        tags.appendChild(el('span', 'tag prio-' + ticket.priority, LABELS.priority[ticket.priority] || ticket.priority));
+        card.appendChild(tags);
+        return card;
+    }
+
+    function showWelcome() {
+        messages.innerHTML = '';
+        const welcome = el('div', 'welcome');
+        welcome.appendChild(el('div', 'logo', 'IT'));
+        welcome.appendChild(el('h2', '', 'Bonjour, comment puis-je vous aider ?'));
+        welcome.appendChild(el('p', '', 'Décrivez votre problème informatique : je cherche dans les procédures internes '
+            + 'et les tickets existants, et je peux créer un ticket pour vous.'));
+        const grid = el('div', 'suggestions');
+        for (const s of SUGGESTIONS) {
+            const button = el('button', 'suggestion');
+            button.type = 'button';
+            button.appendChild(el('strong', '', s.title));
+            button.appendChild(el('span', '', s.hint));
+            button.addEventListener('click', () => { input.value = s.title; form.requestSubmit(); });
+            grid.appendChild(button);
+        }
+        welcome.appendChild(grid);
+        messages.appendChild(welcome);
+    }
+
+    function autoResize() {
+        input.style.height = 'auto';
+        input.style.height = input.scrollHeight + 'px';
+    }
+
+    input.addEventListener('input', autoResize);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    });
+
+    document.getElementById('reset').addEventListener('click', () => {
+        conversationId = null;
+        showWelcome();
+        input.focus();
+    });
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const message = input.value.trim();
+        if (!message || send.disabled) return;
+        const welcome = messages.querySelector('.welcome');
+        if (welcome) welcome.remove();
+
+        addRow('user').textContent = message;
+        input.value = '';
+        autoResize();
+        send.disabled = true;
+
+        const bubble = addRow('bot');
+        const typing = el('div', 'typing');
+        typing.append(el('span'), el('span'), el('span'));
+        bubble.appendChild(typing);
+        scrollToBottom();
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, conversationId })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || res.statusText);
+            conversationId = data.conversationId;
+
+            const sources = data.sources || [];
+            bubble.innerHTML = renderMarkdown(data.answer, sources.length > 0);
+            if (data.ticket) {
+                bubble.appendChild(ticketCard(data.ticket));
+                loadTickets();
+            }
+
+            const meta = el('div', 'meta');
+            sources.forEach(s => meta.appendChild(el('span', 'chip source', '📄 ' + s.title)));
+            (data.toolCalls || []).forEach(t => meta.appendChild(el('span', 'chip', '⚙ ' + t)));
+            if (meta.children.length) bubble.appendChild(meta);
+        } catch (err) {
+            bubble.textContent = 'Erreur : ' + err.message;
+            bubble.classList.add('error');
+        } finally {
+            send.disabled = false;
+            input.focus();
+            scrollToBottom();
+        }
+    });
+
+    // ---------- Vue « Tickets » ----------
+    const FILTERS = [
+        { status: '', label: 'Tous' },
+        { status: 'OPEN', label: 'Ouverts' },
+        { status: 'IN_PROGRESS', label: 'En cours' },
+        { status: 'RESOLVED', label: 'Résolus' },
+        { status: 'CLOSED', label: 'Fermés' },
+    ];
+    const ticketList = document.getElementById('ticket-list');
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('overlay');
+    let tickets = [];
+    let activeFilter = '';
+
+    function timeAgo(iso) {
+        if (!iso) return '';
+        const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+        if (minutes < 1) return "à l'instant";
+        if (minutes < 60) return 'il y a ' + minutes + ' min';
+        const hours = Math.round(minutes / 60);
+        if (hours < 24) return 'il y a ' + hours + ' h';
+        const days = Math.round(hours / 24);
+        if (days < 30) return 'il y a ' + days + ' j';
+        return new Date(iso).toLocaleDateString('fr-FR');
+    }
+
+    function formatDate(iso) {
+        return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    function statusBadge(status) {
+        return el('span', 'status status-' + status, LABELS.status[status] || status);
+    }
+
+    async function loadTickets() {
+        try {
+            const res = await fetch('/api/tickets');
+            tickets = await res.json();
+        } catch (err) {
+            tickets = [];
+        }
+        const ongoing = tickets.filter(t => t.status === 'OPEN' || t.status === 'IN_PROGRESS').length;
+        document.getElementById('ticket-count').textContent = ongoing || '';
+        renderFilters();
+        renderTickets();
+    }
+
+    function renderFilters() {
+        const container = document.getElementById('filters');
+        container.innerHTML = '';
+        for (const f of FILTERS) {
+            const count = f.status ? tickets.filter(t => t.status === f.status).length : tickets.length;
+            const button = el('button', 'filter' + (f.status === activeFilter ? ' active' : ''), f.label);
+            button.type = 'button';
+            button.appendChild(el('span', 'n', String(count)));
+            button.addEventListener('click', () => { activeFilter = f.status; renderFilters(); renderTickets(); });
+            container.appendChild(button);
+        }
+    }
+
+    function renderTickets() {
+        ticketList.innerHTML = '';
+        const visible = tickets.filter(t => !activeFilter || t.status === activeFilter);
+        if (!visible.length) {
+            ticketList.appendChild(el('div', 'empty', 'Aucun ticket.'));
+            return;
+        }
+        for (const t of visible) {
+            const row = el('button', 'ticket-row');
+            row.type = 'button';
+            row.appendChild(el('span', 'ref', t.reference));
+            const main = el('div', 'main');
+            main.appendChild(el('div', 'title', t.title));
+            const sub = t.resolution || t.lastComment;
+            if (sub) main.appendChild(el('div', 'sub', sub));
+            row.appendChild(main);
+            row.appendChild(el('span', 'tag cat', LABELS.category[t.category] || t.category));
+            row.appendChild(el('span', 'tag prio prio-' + t.priority, LABELS.priority[t.priority] || t.priority));
+            const right = el('div', 'when');
+            right.appendChild(statusBadge(t.status));
+            right.appendChild(el('div', '', timeAgo(t.updatedAt)));
+            row.appendChild(right);
+            row.addEventListener('click', () => openTicket(t.reference));
+            ticketList.appendChild(row);
+        }
+    }
+
+    async function openTicket(reference) {
+        drawer.innerHTML = '';
+        drawer.appendChild(el('div', 'empty', 'Chargement…'));
+        drawer.hidden = false;
+        overlay.hidden = false;
+        try {
+            const res = await fetch('/api/tickets/' + encodeURIComponent(reference));
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || res.statusText);
+            renderDrawer(data);
+        } catch (err) {
+            drawer.innerHTML = '';
+            drawer.appendChild(el('div', 'empty', 'Erreur : ' + err.message));
+        }
+    }
+
+    function renderDrawer(data) {
+        const t = data.ticket;
+        drawer.innerHTML = '';
+        const head = el('div', 'drawer-head');
+        const titles = el('div');
+        titles.style.flex = '1';
+        titles.appendChild(el('div', 'ref', t.reference));
+        titles.appendChild(el('h3', '', t.title));
+        head.appendChild(titles);
+        const close = el('button', 'close', '×');
+        close.type = 'button';
+        close.setAttribute('aria-label', 'Fermer');
+        close.addEventListener('click', closeDrawer);
+        head.appendChild(close);
+        drawer.appendChild(head);
+
+        const tags = el('div', 'drawer-tags');
+        tags.append(statusBadge(t.status),
+            el('span', 'tag', LABELS.category[t.category] || t.category),
+            el('span', 'tag prio-' + t.priority, LABELS.priority[t.priority] || t.priority));
+        drawer.appendChild(tags);
+        drawer.appendChild(el('div', 'dates',
+            'Créé le ' + formatDate(data.createdAt) + ' · mis à jour ' + timeAgo(t.updatedAt)));
+
+        const description = el('section');
+        description.append(el('h4', '', 'Description'), el('div', 'text', data.description));
+        drawer.appendChild(description);
+
+        if (t.resolution) {
+            const resolution = el('section');
+            resolution.append(el('h4', '', 'Résolution'), el('div', 'resolution text', t.resolution));
+            drawer.appendChild(resolution);
+        }
+
+        const comments = el('section');
+        comments.appendChild(el('h4', '', 'Commentaires du support'));
+        if (!data.comments.length) comments.appendChild(el('div', 'sub', 'Aucun commentaire pour le moment.'));
+        for (const c of data.comments) {
+            const item = el('div', 'comment');
+            item.append(el('div', 'who', c.author + ' · ' + formatDate(c.createdAt)), el('div', 'text', c.content));
+            comments.appendChild(item);
+        }
+        drawer.appendChild(comments);
+    }
+
+    function closeDrawer() {
+        drawer.hidden = true;
+        overlay.hidden = true;
+    }
+
+    overlay.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+    document.getElementById('refresh').addEventListener('click', loadTickets);
+
+    // ---------- Navigation entre les onglets (#chat, #tickets) ----------
+    function showView() {
+        const view = location.hash === '#tickets' ? 'tickets' : 'chat';
+        document.getElementById('view-chat').hidden = view !== 'chat';
+        document.getElementById('view-tickets').hidden = view !== 'tickets';
+        document.getElementById('reset').hidden = view !== 'chat';
+        document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+        if (view === 'tickets') loadTickets(); else input.focus();
+        window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', showView);
+
+    showWelcome();
+    loadTickets();
+    showView();
+</script>
+</body>
+</html>

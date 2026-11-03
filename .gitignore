@@ -1,0 +1,11 @@
+target/
+.env
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+!.mvn/wrapper/maven-wrapper.jar
+
+# Documents personnels (préparation d'entretien, etc.) : jamais publiés
+/*.pdf
